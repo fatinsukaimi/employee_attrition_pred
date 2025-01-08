@@ -5,9 +5,12 @@ import joblib
 from tensorflow.keras.models import load_model
 
 # Load the pre-trained models and preprocessor
-hybrid_model = joblib.load("hybrid_model.pkl")
-nn_model = load_model("nn_model.keras")
-preprocessor = joblib.load("preprocessor.pkl")
+try:
+    hybrid_model = joblib.load("hybrid_model.pkl")
+    nn_model = load_model("nn_model.keras")
+    preprocessor = joblib.load("preprocessor.pkl")
+except Exception as e:
+    st.error(f"Error loading models or preprocessor: {e}")
 
 # Title and Description
 st.title("Employee Attrition Prediction")
@@ -35,6 +38,10 @@ if col1.button("Predict"):
             "MonthlyIncome", "YearsWithCurrManager"
         ])
 
+        # Debug: Display input DataFrame before processing
+        st.write("### Input DataFrame (Before Processing):")
+        st.write(input_features)
+
         # Ensure column alignment with the preprocessor
         expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
         for col in expected_columns:
@@ -44,14 +51,30 @@ if col1.button("Predict"):
         # Convert all columns to numeric to avoid dtype issues
         input_features = input_features.apply(pd.to_numeric, errors='coerce')
 
+        # Debug: Display input DataFrame after adding missing columns
+        st.write("### Input DataFrame (After Processing):")
+        st.write(input_features)
+
         # Preprocess inputs
         input_processed = preprocessor.transform(input_features)
+
+        # Debug: Display preprocessed inputs
+        st.write("### Preprocessed Input:")
+        st.write(input_processed)
 
         # NN Predictions
         nn_preds = nn_model.predict(input_processed)
 
+        # Debug: Display NN predictions
+        st.write("### Neural Network Predictions:")
+        st.write(nn_preds)
+
         # Combine NN predictions for hybrid model
         hybrid_input = np.column_stack((input_processed, nn_preds))
+
+        # Debug: Display hybrid input
+        st.write("### Hybrid Model Input:")
+        st.write(hybrid_input)
 
         # Hybrid model predictions
         prediction = hybrid_model.predict(hybrid_input)
@@ -67,5 +90,5 @@ if col1.button("Predict"):
 
 # Reset Button
 if col2.button("Reset"):
-    # Refresh the page or clear inputs (not directly possible in Streamlit)
+    # Refresh the page or clear inputs
     st.experimental_rerun()
