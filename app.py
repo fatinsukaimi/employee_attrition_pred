@@ -16,67 +16,39 @@ except Exception as e:
 st.title("Employee Attrition Prediction")
 st.write("This application predicts employee attrition using a hybrid Neural Network and XGBoost model.")
 
-# Initialize session states for inputs
-if "inputs" not in st.session_state:
-    st.session_state.inputs = {
-        "overtime": 0,
-        "environment_satisfaction": 1,
-        "relationship_satisfaction": 1,
-        "monthly_income": 1000,
-        "years_with_manager": 0,
-    }
-
-# Helper function to reset inputs
-def reset_inputs():
-    st.session_state.inputs = {
-        "overtime": 0,
-        "environment_satisfaction": 1,
-        "relationship_satisfaction": 1,
-        "monthly_income": 1000,
-        "years_with_manager": 0,
-    }
-
 # Input Form
-st.session_state.inputs["overtime"] = st.selectbox(
-    "OverTime (Yes=1, No=0)",
-    [0, 1],
-    index=st.session_state.inputs["overtime"]
-)
-st.session_state.inputs["environment_satisfaction"] = st.slider(
-    "Environment Satisfaction (1-4)",
-    1, 4, st.session_state.inputs["environment_satisfaction"]
-)
-st.session_state.inputs["relationship_satisfaction"] = st.slider(
-    "Relationship Satisfaction (1-4)",
-    1, 4, st.session_state.inputs["relationship_satisfaction"]
-)
-st.session_state.inputs["monthly_income"] = st.number_input(
-    "Monthly Income",
-    min_value=1000,
-    max_value=20000,
-    step=100,
-    value=st.session_state.inputs["monthly_income"]
-)
-st.session_state.inputs["years_with_manager"] = st.number_input(
-    "Years With Current Manager",
-    min_value=0,
-    max_value=20,
-    step=1,
-    value=st.session_state.inputs["years_with_manager"]
-)
+overtime = st.selectbox("OverTime (Yes=1, No=0)", [0, 1])
+environment_satisfaction = st.slider("Environment Satisfaction (1-4)", 1, 4)
+relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
+monthly_income = st.text_input("Monthly Income (e.g., 1000)", "1000")
+years_with_manager = st.slider("Years With Current Manager", 0, 20, 0)
 
 # Predict and Reset Buttons Side-by-Side
 col1, col2 = st.columns(2)
 
+def clean_input(value):
+    """Helper function to clean and convert numeric inputs."""
+    try:
+        return float(value.replace(",", "").strip())
+    except ValueError:
+        return None
+
 if col1.button("Predict"):
     try:
+        # Clean inputs
+        monthly_income_cleaned = clean_input(monthly_income)
+
+        if monthly_income_cleaned is None:
+            st.error("Invalid Monthly Income. Please enter a valid number.")
+            st.stop()
+
         # Combine inputs into a DataFrame
         input_features = pd.DataFrame([[
-            st.session_state.inputs["overtime"],
-            st.session_state.inputs["environment_satisfaction"],
-            st.session_state.inputs["relationship_satisfaction"],
-            st.session_state.inputs["monthly_income"],
-            st.session_state.inputs["years_with_manager"]
+            overtime,
+            environment_satisfaction,
+            relationship_satisfaction,
+            monthly_income_cleaned,
+            years_with_manager
         ]], columns=[
             "OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction",
             "MonthlyIncome", "YearsWithCurrManager"
@@ -98,6 +70,11 @@ if col1.button("Predict"):
         # Debug: Display input DataFrame after adding missing columns
         st.write("### Input DataFrame (After Processing):")
         st.write(input_features)
+
+        # Check for NaN or invalid data
+        if input_features.isnull().any().any():
+            st.error("Input contains NaN or invalid values after processing. Please check your inputs.")
+            st.stop()
 
         # Preprocess inputs
         input_processed = preprocessor.transform(input_features)
@@ -133,4 +110,4 @@ if col1.button("Predict"):
         st.error(f"Error during prediction: {e}")
 
 if col2.button("Reset"):
-    reset_inputs()
+    st.experimental_rerun()
