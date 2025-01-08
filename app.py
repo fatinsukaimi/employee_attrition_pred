@@ -31,6 +31,9 @@ if st.button("Predict"):
         years_with_manager
     ]], columns=["OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction", "MonthlyIncome", "YearsWithCurrManager"])
 
+    # Map categorical values to match the preprocessor's expectations
+    input_features_df["OverTime"] = input_features_df["OverTime"].map({1: "Yes", 0: "No"})
+
     # Ensure all expected columns are present in the input DataFrame
     expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
     for col in expected_columns:
@@ -38,7 +41,11 @@ if st.button("Predict"):
             input_features_df[col] = 0  # Add missing columns with default values
 
     # Preprocess inputs
-    input_processed = preprocessor.transform(input_features_df)
+    try:
+        input_processed = preprocessor.transform(input_features_df)
+    except Exception as e:
+        st.error(f"Preprocessing error: {e}")
+        st.stop()
 
     # NN Predictions
     nn_preds = nn_model.predict(input_processed)
