@@ -31,6 +31,9 @@ if st.button("Predict"):
         years_with_manager
     ]], columns=["OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction", "MonthlyIncome", "YearsWithCurrManager"])
 
+    # Debug: Print the input DataFrame
+    st.write("Input DataFrame Before Processing:", input_features_df)
+
     # Map categorical values to match the preprocessor's expectations
     input_features_df["OverTime"] = input_features_df["OverTime"].map({1: "Yes", 0: "No"}).astype(str)
 
@@ -45,6 +48,9 @@ if st.button("Predict"):
     for col in expected_columns:
         if col not in input_features_df.columns:
             input_features_df[col] = 0  # Add missing columns with default values
+
+    # Debug: Check columns after adding missing ones
+    st.write("Input DataFrame After Adding Missing Columns:", input_features_df)
 
     # Preprocess inputs
     try:
