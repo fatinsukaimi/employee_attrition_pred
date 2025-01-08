@@ -29,7 +29,7 @@ else:
     overtime = st.selectbox("OverTime (Yes=1, No=0)", [0, 1])
     environment_satisfaction = st.slider("Environment Satisfaction (1-4)", 1, 4)
     relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
-    monthly_income = st.number_input("Monthly Income", min_value=1000, max_value=20000, step=100)
+    monthly_income = st.text_input("Monthly Income", value="1000")  # Use text input to handle commas
     years_with_manager = st.number_input("Years With Current Manager", min_value=0, max_value=20, step=1)
 
 # Add Predict and Reset buttons
@@ -46,6 +46,13 @@ if reset:
 
 # Handle Predict Button
 if predict:
+    try:
+        # Remove commas from MonthlyIncome and convert to float
+        monthly_income = float(monthly_income.replace(",", ""))
+    except ValueError:
+        st.error("Please enter a valid number for Monthly Income.")
+        st.stop()
+
     # Create a DataFrame for input features
     input_features_df = pd.DataFrame([[
         overtime,
@@ -64,7 +71,7 @@ if predict:
     # Ensure numeric types for all relevant features
     input_features_df["EnvironmentSatisfaction"] = input_features_df["EnvironmentSatisfaction"].astype(float)
     input_features_df["RelationshipSatisfaction"] = input_features_df["RelationshipSatisfaction"].astype(float)
-    input_features_df["MonthlyIncome"] = input_features_df["MonthlyIncome"].replace({',': ''}, regex=True).astype(float)
+    input_features_df["MonthlyIncome"] = input_features_df["MonthlyIncome"].astype(float)
     input_features_df["YearsWithCurrManager"] = input_features_df["YearsWithCurrManager"].astype(float)
 
     # Add missing columns with default values as required by the preprocessor
