@@ -1,107 +1,63 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
 import joblib
 from tensorflow.keras.models import load_model
 
-# Load models and preprocessor
-nn_model = load_model("nn_model.keras")
+# Load the pre-trained models and preprocessor
 hybrid_model = joblib.load("hybrid_model.pkl")
+nn_model = load_model("nn_model.keras")
 preprocessor = joblib.load("preprocessor.pkl")
 
-# Title
+# Title and Description
 st.title("Employee Attrition Prediction")
+st.write("This application predicts employee attrition using a hybrid Neural Network and XGBoost model.")
 
-# Sidebar Inputs
-st.sidebar.header("Employee Features")
+# User Input Form for Important Features
+overtime = st.selectbox("OverTime (Yes=1, No=0)", [0, 1])
+environment_satisfaction = st.slider("Environment Satisfaction (1-4)", 1, 4)
+relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
+monthly_income = st.number_input("Monthly Income", min_value=1000, max_value=20000, step=100)
+years_with_manager = st.number_input("Years With Current Manager", min_value=0, max_value=20, step=1)
 
-# Helper function to clean numeric inputs
-def clean_and_convert_input(input_value):
-    try:
-        cleaned_value = str(input_value).replace(',', '').replace(' ', '')
-        return float(cleaned_value)
-    except ValueError:
-        st.error(f"Invalid input: {input_value}. Please enter a valid number.")
-        return None
-
-# Inputs
-overtime = st.sidebar.selectbox("OverTime (Yes/No)", ["Yes", "No"])
-environment_satisfaction = st.sidebar.slider("Environment Satisfaction (1-4)", 1, 4, 3)
-relationship_satisfaction = st.sidebar.slider("Relationship Satisfaction (1-4)", 1, 4, 3)
-monthly_income_input = st.sidebar.text_input("Monthly Income (e.g., 5000)", value="5000")
-monthly_income = clean_and_convert_input(monthly_income_input)
-years_with_curr_manager = st.sidebar.slider("Years with Current Manager", 0, 20, 5)
-
-# Default values for missing columns
-default_values = {
-    "Age": 30,
-    "DailyRate": 800,
-    "DistanceFromHome": 10,
-    "Education": 3,
-    "HourlyRate": 50,
-    "JobInvolvement": 3,
-    "JobLevel": 2,
-    "JobSatisfaction": 3,
-    "MonthlyRate": 15000,
-    "NumCompaniesWorked": 2,
-    "PercentSalaryHike": 15,
-    "PerformanceRating": 3,
-    "StockOptionLevel": 1,
-    "TotalWorkingYears": 10,
-    "TrainingTimesLastYear": 3,
-    "WorkLifeBalance": 3,
-    "YearsAtCompany": 5,
-    "YearsInCurrentRole": 3,
-    "YearsSinceLastPromotion": 2,
-    "BusinessTravel": 1,
-    "MaritalStatus": 1,
-    "Gender": 1,
-    "Department": 1,
-    "EducationField": 1,
-    "JobRole": 1,
-}
-
-# Prepare input data with all expected columns
-input_data = pd.DataFrame({
-    "OverTime": [1 if overtime == "Yes" else 0],
-    "EnvironmentSatisfaction": [environment_satisfaction],
-    "RelationshipSatisfaction": [relationship_satisfaction],
-    "MonthlyIncome": [monthly_income],
-    "YearsWithCurrManager": [years_with_curr_manager],
-    **{col: [default_values[col]] for col in default_values.keys()},
-})
-
-# Clean numeric columns to ensure compatibility
-for col in input_data.columns:
-    if input_data[col].dtype == 'object' or input_data[col].dtype.name == 'string':
-        try:
-            input_data[col] = input_data[col].str.replace(',', '').astype(float)
-        except Exception as e:
-            st.error(f"Error processing column {col}: {e}")
-            st.stop()
-
-# Debug: Display input data before processing
-st.write("Input DataFrame:", input_data)
-
-# Process and Predict Button
+# Predict Button
 if st.button("Predict"):
     try:
-        # Preprocess the input data
-        input_array = preprocessor.transform(input_data)
+        # Combine inputs into a DataFrame
+        input_features = pd.DataFrame([[
+            overtime, environment_satisfaction, relationship_satisfaction,
+            monthly_income, years_with_manager
+        ]], columns=[
+            "OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction",
+            "MonthlyIncome", "YearsWithCurrManager"
+        ])
 
-        # Predict using Neural Network
-        nn_predictions = nn_model.predict(input_array).flatten()
+        # Ensure column alignment with the preprocessor
+        expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
+        for col in expected_columns:
+            if col not in input_features.columns:
+                input_features[col] = 0  # Fill missing columns with default values
 
-        # Combine NN predictions with input for the hybrid model
-        hybrid_input = np.column_stack((input_array, nn_predictions))
+        # Convert all columns to numeric to avoid dtype issues
+        input_features = input_features.apply(pd.to_numeric, errors='coerce')
 
-        # Predict using Hybrid NN-XGBoost
-        hybrid_predictions = hybrid_model.predict(hybrid_input)
+        # Preprocess inputs
+        input_processed = preprocessor.transform(input_features)
 
-        # Display prediction results
-        st.subheader("Prediction Results")
-        prediction = "Yes" if hybrid_predictions[0] == 1 else "No"
-        st.write(f"Will the employee leave? **{prediction}**")
+        # NN Predictions
+        nn_preds = nn_model.predict(input_processed)
+
+        # Combine NN predictions for hybrid model
+        hybrid_input = np.column_stack((input_processed, nn_preds))
+
+        # Hybrid model predictions
+        prediction = hybrid_model.predict(hybrid_input)
+        attrition_probability = hybrid_model.predict_proba(hybrid_input)[:, 1]
+
+        # Display Results
+        st.write("### Prediction Result")
+        st.write(f"Will the employee leave the company? {'Yes' if prediction[0] == 1 else 'No'}")
+        st.write(f"Probability of Attrition: {attrition_probability[0]:.2f}")
 
     except Exception as e:
-        st.error(f"Error during processing: {e}")
+        st.error(f"Error during prediction: {e}")
