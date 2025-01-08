@@ -71,8 +71,14 @@ input_data = pd.DataFrame({
     **{col: [default_values[col]] for col in default_values.keys()},
 })
 
-# Fix data types
-input_data['MonthlyIncome'] = input_data['MonthlyIncome'].astype('float64')
+# Clean numeric columns to ensure compatibility
+for col in input_data.columns:
+    if input_data[col].dtype == 'object' or input_data[col].dtype.name == 'string':
+        try:
+            input_data[col] = input_data[col].str.replace(',', '').astype(float)
+        except Exception as e:
+            st.error(f"Error processing column {col}: {e}")
+            st.stop()
 
 # Debug: Display input data before processing
 st.write("Input DataFrame:", input_data)
