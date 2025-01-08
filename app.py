@@ -20,8 +20,11 @@ relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
 monthly_income = st.number_input("Monthly Income", min_value=1000, max_value=20000, step=100)
 years_with_manager = st.number_input("Years With Current Manager", min_value=0, max_value=20, step=1)
 
+# Predict and Reset Buttons Side-by-Side
+col1, col2 = st.columns(2)
+
 # Predict Button
-if st.button("Predict"):
+if col1.button("Predict"):
     try:
         # Combine inputs into a DataFrame
         input_features = pd.DataFrame([[
@@ -61,3 +64,8 @@ if st.button("Predict"):
 
     except Exception as e:
         st.error(f"Error during prediction: {e}")
+
+# Reset Button
+if col2.button("Reset"):
+    # Refresh the page or clear inputs (not directly possible in Streamlit)
+    st.experimental_rerun()
