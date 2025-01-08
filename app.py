@@ -13,15 +13,39 @@ preprocessor = joblib.load("preprocessor.pkl")
 st.title("Employee Attrition Prediction")
 st.write("This application predicts employee attrition using a hybrid Neural Network and XGBoost model.")
 
-# User Input Form for Important Features
-overtime = st.selectbox("OverTime (Yes=1, No=0)", [0, 1])
-environment_satisfaction = st.slider("Environment Satisfaction (1-4)", 1, 4)
-relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
-monthly_income = st.number_input("Monthly Income", min_value=1000, max_value=20000, step=100)
-years_with_manager = st.number_input("Years With Current Manager", min_value=0, max_value=20, step=1)
+# Define session state to handle reset
+if "reset" not in st.session_state:
+    st.session_state.reset = False
 
-# Predict Button
-if st.button("Predict"):
+# User Input Form for Important Features
+if st.session_state.reset:
+    overtime = 0
+    environment_satisfaction = 1
+    relationship_satisfaction = 1
+    monthly_income = 1000
+    years_with_manager = 0
+    st.session_state.reset = False
+else:
+    overtime = st.selectbox("OverTime (Yes=1, No=0)", [0, 1])
+    environment_satisfaction = st.slider("Environment Satisfaction (1-4)", 1, 4)
+    relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
+    monthly_income = st.number_input("Monthly Income", min_value=1000, max_value=20000, step=100)
+    years_with_manager = st.number_input("Years With Current Manager", min_value=0, max_value=20, step=1)
+
+# Add Predict and Reset buttons
+col1, col2 = st.columns(2)
+with col1:
+    predict = st.button("Predict")
+with col2:
+    reset = st.button("Reset")
+
+# Handle Reset Button
+if reset:
+    st.session_state.reset = True
+    st.experimental_rerun()
+
+# Handle Predict Button
+if predict:
     # Create a DataFrame for input features
     input_features_df = pd.DataFrame([[
         overtime,
