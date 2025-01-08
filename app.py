@@ -61,19 +61,19 @@ if predict:
     # Map categorical values to match the preprocessor's expectations
     input_features_df["OverTime"] = input_features_df["OverTime"].map({1: "Yes", 0: "No"}).astype(str)
 
-    # Clean numeric data (remove commas, if any)
-    input_features_df["MonthlyIncome"] = input_features_df["MonthlyIncome"].replace({',': ''}, regex=True).astype(float)
+    # Ensure numeric types for all relevant features
     input_features_df["EnvironmentSatisfaction"] = input_features_df["EnvironmentSatisfaction"].astype(float)
     input_features_df["RelationshipSatisfaction"] = input_features_df["RelationshipSatisfaction"].astype(float)
+    input_features_df["MonthlyIncome"] = input_features_df["MonthlyIncome"].replace({',': ''}, regex=True).astype(float)
     input_features_df["YearsWithCurrManager"] = input_features_df["YearsWithCurrManager"].astype(float)
 
-    # Ensure all expected columns are present in the input DataFrame
+    # Add missing columns with default values as required by the preprocessor
     expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
     for col in expected_columns:
         if col not in input_features_df.columns:
-            input_features_df[col] = 0  # Add missing columns with default values
+            input_features_df[col] = 0  # Default value for missing columns
 
-    # Debug: Check columns after adding missing ones
+    # Debug: Show input after adding missing columns
     st.write("Input DataFrame After Adding Missing Columns:", input_features_df)
 
     # Preprocess inputs
