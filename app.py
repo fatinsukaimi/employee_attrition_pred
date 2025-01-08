@@ -1,106 +1,83 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
+import numpy as np
 import joblib
 from tensorflow.keras.models import load_model
 
-# Load the pre-trained models and preprocessor
-hybrid_model = joblib.load("hybrid_model.pkl")
+# Load models and preprocessor
 nn_model = load_model("nn_model.keras")
+hybrid_model = joblib.load("hybrid_model.pkl")
 preprocessor = joblib.load("preprocessor.pkl")
 
-# Title and Description
+# Title
 st.title("Employee Attrition Prediction")
-st.write("This application predicts employee attrition using a hybrid Neural Network and XGBoost model.")
 
-# Define session state to handle reset
-if "reset" not in st.session_state:
-    st.session_state.reset = False
+# Sidebar Inputs
+st.sidebar.header("Employee Features")
 
-# User Input Form for Important Features
-if st.session_state.reset:
-    overtime = 0
-    environment_satisfaction = 1
-    relationship_satisfaction = 1
-    monthly_income = 1000
-    years_with_manager = 0
-    st.session_state.reset = False
+# Reset Prediction Button
+if "reset_prediction" not in st.session_state:
+    st.session_state.reset_prediction = False
+
+if st.sidebar.button("Reset Prediction"):
+    st.session_state.reset_prediction = True
 else:
-    overtime = st.selectbox("OverTime (Yes=1, No=0)", [0, 1])
-    environment_satisfaction = st.slider("Environment Satisfaction (1-4)", 1, 4)
-    relationship_satisfaction = st.slider("Relationship Satisfaction (1-4)", 1, 4)
-    monthly_income = st.text_input("Monthly Income", value="1000")  # Use text input to handle commas
-    years_with_manager = st.number_input("Years With Current Manager", min_value=0, max_value=20, step=1)
+    st.session_state.reset_prediction = False
 
-# Add Predict and Reset buttons
-col1, col2 = st.columns(2)
-with col1:
-    predict = st.button("Predict")
-with col2:
-    reset = st.button("Reset")
-
-# Handle Reset Button
-if reset:
-    st.session_state.reset = True
-    st.experimental_rerun()
-
-# Handle Predict Button
-if predict:
+# Helper function to clean and convert numeric inputs
+def clean_and_convert_input(input_value):
     try:
-        # Remove commas from MonthlyIncome and convert to float
-        monthly_income = float(monthly_income.replace(",", ""))
+        cleaned_value = input_value.replace(',', '').replace(' ', '')
+        return float(cleaned_value)
     except ValueError:
-        st.error("Please enter a valid number for Monthly Income.")
-        st.stop()
+        st.error(f"Invalid input: {input_value}. Please enter a valid number.")
+        return None
 
-    # Create a DataFrame for input features
-    input_features_df = pd.DataFrame([[
-        overtime,
-        environment_satisfaction,
-        relationship_satisfaction,
-        monthly_income,
-        years_with_manager
-    ]], columns=["OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction", "MonthlyIncome", "YearsWithCurrManager"])
+# Inputs
+overtime = st.sidebar.selectbox("OverTime (Yes/No)", ["Yes", "No"])
+environment_satisfaction = st.sidebar.slider("Environment Satisfaction (1-4)", 1, 4, 3)
+relationship_satisfaction = st.sidebar.slider("Relationship Satisfaction (1-4)", 1, 4, 3)
+monthly_income_input = st.sidebar.text_input("Monthly Income (e.g., 5000)", value="5000")
+monthly_income = clean_and_convert_input(monthly_income_input)
+years_with_curr_manager = st.sidebar.slider("Years with Current Manager", 0, 20, 5)
 
-    # Debug: Print the input DataFrame
-    st.write("Input DataFrame Before Processing:", input_features_df)
-
-    # Map categorical values to match the preprocessor's expectations
-    input_features_df["OverTime"] = input_features_df["OverTime"].map({1: "Yes", 0: "No"}).astype(str)
-
-    # Ensure numeric types for all relevant features
-    input_features_df["EnvironmentSatisfaction"] = input_features_df["EnvironmentSatisfaction"].astype(float)
-    input_features_df["RelationshipSatisfaction"] = input_features_df["RelationshipSatisfaction"].astype(float)
-    input_features_df["MonthlyIncome"] = input_features_df["MonthlyIncome"].astype(float)
-    input_features_df["YearsWithCurrManager"] = input_features_df["YearsWithCurrManager"].astype(float)
-
-    # Add missing columns with default values as required by the preprocessor
-    expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
-    for col in expected_columns:
-        if col not in input_features_df.columns:
-            input_features_df[col] = 0  # Default value for missing columns
-
-    # Debug: Show input after adding missing columns
-    st.write("Input DataFrame After Adding Missing Columns:", input_features_df)
-
-    # Preprocess inputs
+# Process and Predict Button
+if st.button("Predict"):
+    st.session_state.reset_prediction = False
     try:
-        input_processed = preprocessor.transform(input_features_df)
+        # Prepare input data
+        input_data = pd.DataFrame({
+            "OverTime": [1 if overtime == "Yes" else 0],
+            "EnvironmentSatisfaction": [environment_satisfaction],
+            "RelationshipSatisfaction": [relationship_satisfaction],
+            "MonthlyIncome": [monthly_income],
+            "YearsWithCurrManager": [years_with_curr_manager],
+        })
+
+        # Ensure numeric and categorical types
+        numeric_columns = preprocessor.transformers[0][2]
+        input_data[numeric_columns] = input_data[numeric_columns].astype('float64')
+
+        categorical_columns = preprocessor.transformers[1][2]
+        input_data[categorical_columns] = input_data[categorical_columns].astype(str)
+
+        # Preprocess
+        input_array = preprocessor.transform(input_data)
+
+        # Predict using Neural Network
+        nn_predictions = nn_model.predict(input_array).flatten()
+
+        # Create hybrid features
+        input_hybrid = np.column_stack((input_array, nn_predictions))
+
+        # Predict using Hybrid NN-XGBoost
+        hybrid_predictions = hybrid_model.predict(input_hybrid)
+
+        # Display predictions
+        st.subheader("Prediction Results")
+        if not st.session_state.reset_prediction:
+            prediction = "Yes" if hybrid_predictions[0] == 1 else "No"
+            st.write(f"Will the employee leave? **{prediction}**")
+
     except Exception as e:
-        st.error(f"Preprocessing error: {e}")
-        st.stop()
-
-    # NN Predictions
-    nn_preds = nn_model.predict(input_processed)
-
-    # Combine NN predictions for hybrid model
-    hybrid_input = np.column_stack((input_processed, nn_preds))
-
-    # Hybrid model predictions
-    prediction = hybrid_model.predict(hybrid_input)
-    attrition_probability = hybrid_model.predict_proba(hybrid_input)[:, 1]
-
-    # Display Results
-    st.write("### Prediction Result")
-    st.write(f"Will the employee leave the company? {'Yes' if prediction[0] == 1 else 'No'}")
-    st.write(f"Probability of Attrition: {attrition_probability[0]:.2f}")
+        st.error(f"Error during processing: {e}")
