@@ -27,7 +27,7 @@ else:
 # Helper function to clean and convert numeric inputs
 def clean_and_convert_input(input_value):
     try:
-        cleaned_value = input_value.replace(',', '').replace(' ', '')
+        cleaned_value = str(input_value).replace(',', '').replace(' ', '')
         return float(cleaned_value)
     except ValueError:
         st.error(f"Invalid input: {input_value}. Please enter a valid number.")
@@ -79,6 +79,18 @@ input_data = pd.DataFrame({
     "YearsWithCurrManager": [years_with_curr_manager],
     **{col: [default_values[col]] for col in default_values.keys()},
 })
+
+# Ensure all numeric columns are of type float64
+for col in input_data.columns:
+    try:
+        input_data[col] = pd.to_numeric(input_data[col], errors="coerce")
+    except Exception as e:
+        st.error(f"Error converting column {col} to numeric: {e}")
+        st.stop()
+
+# Debug: Print data types before preprocessing
+st.write("Input DataFrame:", input_data)
+st.write("Data Types:", input_data.dtypes)
 
 # Process and Predict Button
 if st.button("Predict"):
