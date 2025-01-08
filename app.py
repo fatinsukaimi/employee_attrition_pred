@@ -15,16 +15,7 @@ st.title("Employee Attrition Prediction")
 # Sidebar Inputs
 st.sidebar.header("Employee Features")
 
-# Reset Prediction Button
-if "reset_prediction" not in st.session_state:
-    st.session_state.reset_prediction = False
-
-if st.sidebar.button("Reset Prediction"):
-    st.session_state.reset_prediction = True
-else:
-    st.session_state.reset_prediction = False
-
-# Helper function to clean and convert numeric inputs
+# Helper function to clean numeric inputs
 def clean_and_convert_input(input_value):
     try:
         cleaned_value = str(input_value).replace(',', '').replace(' ', '')
@@ -80,39 +71,31 @@ input_data = pd.DataFrame({
     **{col: [default_values[col]] for col in default_values.keys()},
 })
 
-# Ensure all numeric columns are of type float64
-for col in input_data.columns:
-    try:
-        input_data[col] = pd.to_numeric(input_data[col], errors="coerce")
-    except Exception as e:
-        st.error(f"Error converting column {col} to numeric: {e}")
-        st.stop()
+# Fix data types
+input_data['MonthlyIncome'] = input_data['MonthlyIncome'].astype('float64')
 
-# Debug: Print data types before preprocessing
+# Debug: Display input data before processing
 st.write("Input DataFrame:", input_data)
-st.write("Data Types:", input_data.dtypes)
 
 # Process and Predict Button
 if st.button("Predict"):
-    st.session_state.reset_prediction = False
     try:
-        # Preprocess
+        # Preprocess the input data
         input_array = preprocessor.transform(input_data)
 
         # Predict using Neural Network
         nn_predictions = nn_model.predict(input_array).flatten()
 
-        # Create hybrid features
-        input_hybrid = np.column_stack((input_array, nn_predictions))
+        # Combine NN predictions with input for the hybrid model
+        hybrid_input = np.column_stack((input_array, nn_predictions))
 
         # Predict using Hybrid NN-XGBoost
-        hybrid_predictions = hybrid_model.predict(input_hybrid)
+        hybrid_predictions = hybrid_model.predict(hybrid_input)
 
-        # Display predictions
+        # Display prediction results
         st.subheader("Prediction Results")
-        if not st.session_state.reset_prediction:
-            prediction = "Yes" if hybrid_predictions[0] == 1 else "No"
-            st.write(f"Will the employee leave? **{prediction}**")
+        prediction = "Yes" if hybrid_predictions[0] == 1 else "No"
+        st.write(f"Will the employee leave? **{prediction}**")
 
     except Exception as e:
         st.error(f"Error during processing: {e}")
