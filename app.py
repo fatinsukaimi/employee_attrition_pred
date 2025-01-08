@@ -22,14 +22,23 @@ years_with_manager = st.number_input("Years With Current Manager", min_value=0, 
 
 # Predict Button
 if st.button("Predict"):
-    # Combine inputs into an array
-    input_features = np.array([[
-        overtime, environment_satisfaction, relationship_satisfaction,
-        monthly_income, years_with_manager
-    ]])
+    # Create a DataFrame for input features
+    input_features_df = pd.DataFrame([[
+        overtime,
+        environment_satisfaction,
+        relationship_satisfaction,
+        monthly_income,
+        years_with_manager
+    ]], columns=["OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction", "MonthlyIncome", "YearsWithCurrManager"])
+
+    # Ensure all expected columns are present in the input DataFrame
+    expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
+    for col in expected_columns:
+        if col not in input_features_df.columns:
+            input_features_df[col] = 0  # Add missing columns with default values
 
     # Preprocess inputs
-    input_processed = preprocessor.transform(input_features)
+    input_processed = preprocessor.transform(input_features_df)
 
     # NN Predictions
     nn_preds = nn_model.predict(input_processed)
