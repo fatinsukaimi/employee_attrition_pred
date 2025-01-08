@@ -3,16 +3,11 @@ import numpy as np
 import pandas as pd
 import joblib
 from tensorflow.keras.models import load_model
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Load the pre-trained models and preprocessor
 hybrid_model = joblib.load("hybrid_model.pkl")
 nn_model = load_model("nn_model.keras")
 preprocessor = joblib.load("preprocessor.pkl")
-
-# Load SHAP importance data
-shap_importance_df = pd.read_csv("shap_importance.csv")
 
 # Title and Description
 st.title("Employee Attrition Prediction")
@@ -48,24 +43,5 @@ if st.button("Predict"):
 
     # Display Results
     st.write("### Prediction Result")
-    st.write(f"Attrition Prediction: {'Yes' if prediction[0] == 1 else 'No'}")
+    st.write(f"Will the employee leave the company? {'Yes' if prediction[0] == 1 else 'No'}")
     st.write(f"Probability of Attrition: {attrition_probability[0]:.2f}")
-
-# Feature Importance Section
-if st.checkbox("Show Feature Importance"):
-    st.write("### Top Factors Influencing Employee Attrition")
-    fig, ax = plt.subplots()
-    sns.barplot(
-        data=shap_importance_df.head(10),
-        x="Mean SHAP Value",
-        y="Feature",
-        palette="viridis",
-        ax=ax
-    )
-    ax.set_title("Top Factors Influencing Attrition")
-    st.pyplot(fig)
-
-# SHAP Summary Plot Section
-if st.checkbox("Show SHAP Summary Plot"):
-    st.write("### SHAP Summary Plot")
-    st.image("shap_summary_plot.png", caption="SHAP Summary Plot")
