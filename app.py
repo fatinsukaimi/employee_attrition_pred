@@ -41,26 +41,49 @@ monthly_income_input = st.sidebar.text_input("Monthly Income (e.g., 5000)", valu
 monthly_income = clean_and_convert_input(monthly_income_input)
 years_with_curr_manager = st.sidebar.slider("Years with Current Manager", 0, 20, 5)
 
+# Default values for missing columns
+default_values = {
+    "Age": 30,
+    "DailyRate": 800,
+    "DistanceFromHome": 10,
+    "Education": 3,
+    "HourlyRate": 50,
+    "JobInvolvement": 3,
+    "JobLevel": 2,
+    "JobSatisfaction": 3,
+    "MonthlyRate": 15000,
+    "NumCompaniesWorked": 2,
+    "PercentSalaryHike": 15,
+    "PerformanceRating": 3,
+    "StockOptionLevel": 1,
+    "TotalWorkingYears": 10,
+    "TrainingTimesLastYear": 3,
+    "WorkLifeBalance": 3,
+    "YearsAtCompany": 5,
+    "YearsInCurrentRole": 3,
+    "YearsSinceLastPromotion": 2,
+    "BusinessTravel": 1,
+    "MaritalStatus": 1,
+    "Gender": 1,
+    "Department": 1,
+    "EducationField": 1,
+    "JobRole": 1,
+}
+
+# Prepare input data with all expected columns
+input_data = pd.DataFrame({
+    "OverTime": [1 if overtime == "Yes" else 0],
+    "EnvironmentSatisfaction": [environment_satisfaction],
+    "RelationshipSatisfaction": [relationship_satisfaction],
+    "MonthlyIncome": [monthly_income],
+    "YearsWithCurrManager": [years_with_curr_manager],
+    **{col: [default_values[col]] for col in default_values.keys()},
+})
+
 # Process and Predict Button
 if st.button("Predict"):
     st.session_state.reset_prediction = False
     try:
-        # Prepare input data
-        input_data = pd.DataFrame({
-            "OverTime": [1 if overtime == "Yes" else 0],
-            "EnvironmentSatisfaction": [environment_satisfaction],
-            "RelationshipSatisfaction": [relationship_satisfaction],
-            "MonthlyIncome": [monthly_income],
-            "YearsWithCurrManager": [years_with_curr_manager],
-        })
-
-        # Ensure numeric and categorical types
-        numeric_columns = preprocessor.transformers[0][2]
-        input_data[numeric_columns] = input_data[numeric_columns].astype('float64')
-
-        categorical_columns = preprocessor.transformers[1][2]
-        input_data[categorical_columns] = input_data[categorical_columns].astype(str)
-
         # Preprocess
         input_array = preprocessor.transform(input_data)
 
