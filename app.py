@@ -32,7 +32,13 @@ if st.button("Predict"):
     ]], columns=["OverTime", "EnvironmentSatisfaction", "RelationshipSatisfaction", "MonthlyIncome", "YearsWithCurrManager"])
 
     # Map categorical values to match the preprocessor's expectations
-    input_features_df["OverTime"] = input_features_df["OverTime"].map({1: "Yes", 0: "No"})
+    input_features_df["OverTime"] = input_features_df["OverTime"].map({1: "Yes", 0: "No"}).astype(str)
+
+    # Ensure correct data types for numerical features
+    input_features_df["EnvironmentSatisfaction"] = input_features_df["EnvironmentSatisfaction"].astype(float)
+    input_features_df["RelationshipSatisfaction"] = input_features_df["RelationshipSatisfaction"].astype(float)
+    input_features_df["MonthlyIncome"] = input_features_df["MonthlyIncome"].astype(float)
+    input_features_df["YearsWithCurrManager"] = input_features_df["YearsWithCurrManager"].astype(float)
 
     # Ensure all expected columns are present in the input DataFrame
     expected_columns = [name for transformer in preprocessor.transformers_ for name in transformer[2]]
